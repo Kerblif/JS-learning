@@ -99,22 +99,29 @@ var Store = function () {
   this.addParam = function (Name, Type) {
     const Index = this.param.indexOf(Name)
 
-    if (Index != -1) {
+    if (Index == -1) {
       var TempParam = {}
       TempParam.name = Name
       TempParam.type = Type
       this.param.push(TempParam)
     }
   }
+  this.findParam = function (Name) {
+    for (var Param of this.param) {
+      if (Param.name == Name) {
+        return this.param.indexOf(Param)
+      }
+    }
+    return -1
+  }
   this.setUniform = function (Name, Value) {
-    const Index = this.param.indexOf(Name)
+    const Index = this.findParam(Name)
     const Param = this.param[Index]
     if (Index != -1) {
       shaderProgram[Param.name] = gl.getUniformLocation(shaderProgram, Param.name)
       if (Param.type == 'Matrix4fv') {
         gl['uniform' + Param.type](shaderProgram[Name], false, Value)
-      }
-      else {
+      } else {
         gl['uniform' + Param.type](shaderProgram[Name], Value)
       }
     }
@@ -174,14 +181,14 @@ var zoom = 1.0
 var timeMs = Date.now()
 var startTime = Date.now()
 var Tex2D
-var param1 = 0.0
-var param2 = 0.0
+var param1 = 50.0
+var param2 = 60.0
 var param3 = 0.0
 var param4 = 0.0
 
 function setUniforms () {
-  storage.setUniform('pMatrixUniform', pMatrix)
-  storage.setUniform('mvMatrixUniform', mvMatrix)
+  storage.setUniform('uPMatrix', pMatrix)
+  storage.setUniform('uMVMatrix', mvMatrix)
   storage.setUniform('uTime', timeMs)
   storage.setUniform('offX', offX)
   storage.setUniform('offY', offY)
