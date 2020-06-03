@@ -60,10 +60,7 @@ void main(void)
     xy /= zoom;
     float i = vec2rec(xy);
     vec3 frac = vec3(1.0 - (i * 12.2324 / 13.7898 + 1072.54) / 2000.0 + param3 / 100.0, (i * 45.9766 / 54.7898 + 960.14) / 2000.0 + param3 / 100.0, (i + 1000.0) / 2000.0 + param3 / 100.0);
-    if ((frac.x + frac.y + frac.z) > 2.0)
-      oColor = texture(Tex2D, frac.xy + param4 / 1000.0);
-    else
-      oColor = vec4(frac, 1);
+    oColor = texture(Tex2D, frac.xy + param4 / 1000.0);
 }`
 
 var gl
@@ -77,7 +74,7 @@ function initGL (canvas) {
   if (!gl) {
     alert('Could not initialize WebGL')
   }
-}
+
 
 var Params = function() {
   this.param1 = 0.0
