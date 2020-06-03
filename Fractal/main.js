@@ -1,6 +1,7 @@
 'use strict'
 
-const vxShaderStr = `#version 300 es
+const vxShaderStr =
+  `#version 300 es
 in vec3 aVertexPosition;
 
 uniform mat4 uMVMatrix;
@@ -16,7 +17,7 @@ void main(void)
 `
 
 const fsShaderStr =
-`#version 300 es
+  `#version 300 es
 precision highp float;
 
 uniform float uCellWidth;
@@ -64,21 +65,67 @@ void main(void)
 }`
 
 var gl
+
 function initGL (canvas) {
   try {
     gl = canvas.getContext('webgl2')
     gl.viewportWidth = canvas.width
     gl.viewportHeight = canvas.height
-  } catch (e) {
-  }
+  } catch (e) {}
   if (!gl) {
     alert('Could not initialize WebGL')
   }
+}
 
+var Store = function () {
+  this.param = new Array()
+  this.tex = new Array()
+  this.addTexture = function (Name, Num, Texture, Type) {
+    var TempTex = {}
+    TempTex.num = Num
+    TempTex.name = Name
+    TempTex.texture = Texture
+    TempTex.type = Type
+    this.tex.push(TempTex)
+  }
+  this.activeTextures = function () {
+    for (var Texture of this.tex) {
+      shaderProgram[Texture.name] = gl.getUniformLocation(shaderProgram, 'Tex2D')
+      gl.activeTexture(gl['TEXTURE' + Texture.num])
+      gl.bindTexture(gl[Texture.type], Texture.texture)
+      gl.uniform1i(shaderProgram[Texture.name], 0)
+    }
+  }
+  this.addParam = function (Name, Type) {
+    const Index = this.param.indexOf(Name)
 
-var Params = function() {
-  this.param1 = 0.0
-  this.param2 = 0.0
+    if (Index != -1) {
+      var TempParam = {}
+      TempParam.name = Name
+      TempParam.type = Type
+      this.param.push(TempParam)
+    }
+  }
+  this.setUniform = function (Name, Value) {
+    const Index = this.param.indexOf(Name)
+    const Param = this.param[Index]
+    if (Index != -1) {
+      shaderProgram[Param.name] = gl.getUniformLocation(shaderProgram, Param.name)
+      if (Param.type == 'Matrix4fv') {
+        gl['uniform' + Param.type](shaderProgram[Name], false, Value)
+      }
+      else {
+        gl['uniform' + Param.type](shaderProgram[Name], Value)
+      }
+    }
+  }
+}
+
+var storage = new Store()
+
+var Params = function () {
+  this.param1 = 50.0
+  this.param2 = 60.0
   this.param3 = 0.0
   this.param4 = 0.0
 }
@@ -117,24 +164,10 @@ function initShaders () {
 
   shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, 'aVertexPosition')
   gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute)
-
-  shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, 'uPMatrix')
-  shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, 'uMVMatrix')
-  shaderProgram.uCellWidth = gl.getUniformLocation(shaderProgram, 'uCellWidth')
-  shaderProgram.uTime = gl.getUniformLocation(shaderProgram, 'uTime')
-  shaderProgram.offX = gl.getUniformLocation(shaderProgram, 'offX')
-  shaderProgram.offY = gl.getUniformLocation(shaderProgram, 'offY')
-  shaderProgram.zoom = gl.getUniformLocation(shaderProgram, 'zoom')
-  shaderProgram.Tex2D = gl.getUniformLocation(shaderProgram, 'Tex2D')
-  shaderProgram.param1 = gl.getUniformLocation(shaderProgram, 'param1')
-  shaderProgram.param2 = gl.getUniformLocation(shaderProgram, 'param2')
-  shaderProgram.param3 = gl.getUniformLocation(shaderProgram, 'param3')
-  shaderProgram.param4 = gl.getUniformLocation(shaderProgram, 'param4')
 }
 
 var mvMatrix = mat4.create()
 var pMatrix = mat4.create()
-var checkersCellWidth = 30
 var offX = 0.0
 var offY = 0.0
 var zoom = 1.0
@@ -147,21 +180,18 @@ var param3 = 0.0
 var param4 = 0.0
 
 function setUniforms () {
-  gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix)
-  gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix)
-  gl.uniform1f(shaderProgram.uCellWidth, checkersCellWidth)
-  gl.uniform1f(shaderProgram.uTime, timeMs)
-  gl.uniform1f(shaderProgram.offX, offX)
-  gl.uniform1f(shaderProgram.offY, offY)
-  gl.uniform1f(shaderProgram.zoom, zoom)
-  gl.uniform1f(shaderProgram.param1, param1)
-  gl.uniform1f(shaderProgram.param2, param2)
-  gl.uniform1f(shaderProgram.param3, param3)
-  gl.uniform1f(shaderProgram.param4, param4)
+  storage.setUniform('pMatrixUniform', pMatrix)
+  storage.setUniform('mvMatrixUniform', mvMatrix)
+  storage.setUniform('uTime', timeMs)
+  storage.setUniform('offX', offX)
+  storage.setUniform('offY', offY)
+  storage.setUniform('zoom', zoom)
+  storage.setUniform('param1', param1)
+  storage.setUniform('param2', param2)
+  storage.setUniform('param3', param3)
+  storage.setUniform('param4', param4)
 
-  gl.activeTexture(gl.TEXTURE0)
-  gl.bindTexture(gl.TEXTURE_2D, Tex2D)
-  gl.uniform1i(shaderProgram.uSampler, 0)
+  storage.activeTextures()
 }
 
 var squareVertexPositionBuffer
@@ -232,17 +262,10 @@ function tick () {
   // console.log('tick' + new Date());
 }
 
-function webGLStart () {
-  // default cell width
-  var canvas = document.getElementById('webglCanvas')
-  canvas.addEventListener('mousemove', control)
-  canvas.addEventListener('mousedown', mouseDown)
-  canvas.addEventListener('mouseup', mouseUp)
-  canvas.addEventListener('mouseout', mouseUp)
-  canvas.addEventListener('wheel', mouseWheel)
-
+function GuiInit () {
   var menu = new Params()
   var gui = new dat.GUI()
+
   var contrParam1 = gui.add(menu, 'param1')
   var contrParam2 = gui.add(menu, 'param2')
   var contrParam3 = gui.add(menu, 'param3')
@@ -259,9 +282,38 @@ function webGLStart () {
   contrParam4.onChange(function (value) {
     param4 = value
   })
+}
+
+function StorageInit () {
+  Tex2D = loadTexture('tex.jpg')
+  storage.addTexture('Tex2D', 0, Tex2D, 'TEXTURE_2D')
+
+  storage.addParam('uPMatrix', 'Matrix4fv')
+  storage.addParam('uMVMatrix', 'Matrix4fv')
+  storage.addParam('uTime', '1f')
+  storage.addParam('offX', '1f')
+  storage.addParam('offY', '1f')
+  storage.addParam('zoom', '1f')
+  storage.addParam('param1', '1f')
+  storage.addParam('param2', '1f')
+  storage.addParam('param3', '1f')
+  storage.addParam('param4', '1f')
+}
+
+function webGLStart () {
+  var canvas = document.getElementById('webglCanvas')
+  canvas.addEventListener('mousemove', control)
+  canvas.addEventListener('mousedown', mouseDown)
+  canvas.addEventListener('mouseup', mouseUp)
+  canvas.addEventListener('mouseout', mouseUp)
+  canvas.addEventListener('wheel', mouseWheel)
+
+  GuiInit()
 
   initGL(canvas)
-  Tex2D = loadTexture('tex.jpg')
+
+  StorageInit()
+
   initShaders()
   initBuffers()
 
@@ -274,24 +326,24 @@ function webGLStart () {
 var xNew, xOld, yNew, yOld
 var IsClicked = false
 
-function mouseDown() {
+function mouseDown () {
   IsClicked = true
 }
 
-function mouseUp() {
+function mouseUp () {
   IsClicked = false
   xNew = undefined
   yNew = undefined
 }
 
-function mouseWheel(e) {
+function mouseWheel (e) {
   var oldZoom = zoom
   zoom += e.wheelDelta / 240.0
   offX += (zoom - oldZoom) * param1 / 100
   offY += (zoom - oldZoom) * param2 / 100
 }
 
-function control(e) {
+function control (e) {
   if (IsClicked) {
     xOld = xNew
     xNew = e.clientX
