@@ -1,68 +1,9 @@
-'use strict'
+import vxShaderStr from './main.vert'
+import fsShaderStr from './main.frag'
+import Image2D from './tex.jpg'
+import * as dat from 'dat.gui'
 
-const vxShaderStr =
-  `#version 300 es
-in vec3 aVertexPosition;
-
-uniform mat4 uMVMatrix;
-uniform mat4 uPMatrix;
-
-out vec2 vTextureCoord;
-
-void main(void)
-{
-    vec4 pos = vec4(aVertexPosition, 1.0);
-    gl_Position = uPMatrix * uMVMatrix * pos;
-}
-`
-
-const fsShaderStr =
-  `#version 300 es
-precision highp float;
-
-uniform float uCellWidth;
-uniform float uTime;
-
-uniform float offX, offY, zoom;
-uniform sampler2D Tex2D;
-
-uniform float param3, param4;
-
-out vec4 oColor;
-
-vec2 vec2addvec2(vec2 a, vec2 b)
-{
-    return vec2(a.x + b.x, a.y + b.y);
-}
-vec2 vec2mulvec2(vec2 a, vec2 b)
-{
-    return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
-}
-float vec2abs(vec2 a)
-{
-    return sqrt(a.x * a.x + a.y * a.y);
-}
-float vec2rec(vec2 xy)
-{
-    vec2 z = xy;
-    float i;
-    while (vec2abs(z) < 2.0 && i < 2000.0)
-    {
-      i++;
-      z = vec2addvec2(vec2mulvec2(z, z), xy);
-    }
-    return i;
-}
-void main(void)
-{
-    vec2 xy = vec2(gl_FragCoord) / 500.0;
-    xy.x -= 0.5 + offX;
-    xy.y -= 0.5 + offY;
-    xy /= zoom;
-    float i = vec2rec(xy);
-    vec3 frac = vec3(1.0 - (i * 12.2324 / 13.7898 + 1072.54) / 2000.0 + param3 / 100.0, (i * 45.9766 / 54.7898 + 960.14) / 2000.0 + param3 / 100.0, (i + 1000.0) / 2000.0 + param3 / 100.0);
-    oColor = texture(Tex2D, frac.xy + param4 / 1000.0);
-}`
+import { mat4 } from 'gl-matrix'
 
 var gl
 
@@ -78,8 +19,8 @@ function initGL (canvas) {
 }
 
 var Store = function () {
-  this.param = new Array()
-  this.tex = new Array()
+  this.param = []
+  this.tex = []
   this.addTexture = function (Name, Num, Texture, Type) {
     var TempTex = {}
     TempTex.num = Num
@@ -187,8 +128,6 @@ var param3 = 0.0
 var param4 = 0.0
 
 function setUniforms () {
-  storage.setUniform('uPMatrix', pMatrix)
-  storage.setUniform('uMVMatrix', mvMatrix)
   storage.setUniform('uTime', timeMs)
   storage.setUniform('offX', offX)
   storage.setUniform('offY', offY)
@@ -222,20 +161,13 @@ function drawScene () {
   gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight)
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 
-  mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix)
-
-  mat4.identity(mvMatrix)
-
-  mat4.translate(mvMatrix, [-3.0, 0.0, -2.0])
-
-  mat4.translate(mvMatrix, [3.0, 0.0, 0.0])
   gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer)
   gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, squareVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0)
   setUniforms()
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, squareVertexPositionBuffer.numItems)
 }
 
-function loadTexture (url) {
+function loadTexture () {
   const texture = gl.createTexture()
   gl.bindTexture(gl.TEXTURE_2D, texture)
 
@@ -254,7 +186,7 @@ function loadTexture (url) {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     }
   }
-  image.src = url
+  image.src = Image2D
 
   return texture
 }
@@ -266,7 +198,6 @@ function isPowerOf2 (value) {
 function tick () {
   window.requestAnimationFrame(tick)
   drawScene()
-  // console.log('tick' + new Date());
 }
 
 function GuiInit () {
@@ -292,11 +223,9 @@ function GuiInit () {
 }
 
 function StorageInit () {
-  Tex2D = loadTexture('tex.jpg')
+  Tex2D = loadTexture()
   storage.addTexture('Tex2D', 0, Tex2D, 'TEXTURE_2D')
 
-  storage.addParam('uPMatrix', 'Matrix4fv')
-  storage.addParam('uMVMatrix', 'Matrix4fv')
   storage.addParam('uTime', '1f')
   storage.addParam('offX', '1f')
   storage.addParam('offY', '1f')
@@ -345,9 +274,9 @@ function mouseUp () {
 
 function mouseWheel (e) {
   var oldZoom = zoom
-  zoom += e.wheelDelta / 240.0
-  offX += (zoom - oldZoom) * param1 / 100
-  offY += (zoom - oldZoom) * param2 / 100
+  zoom += e.wheelDelta / 240.0 * zoom
+  offX += (zoom - oldZoom) * param1 / 100 / zoom + 0.5 / zoom
+  offY += (zoom - oldZoom) * param2 / 100 / zoom + 0.5 / zoom
 }
 
 function control (e) {
@@ -364,3 +293,5 @@ function control (e) {
     }
   }
 }
+
+document.addEventListener('DOMContentLoaded', webGLStart);
