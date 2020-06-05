@@ -3,6 +3,8 @@ import fsShaderStr from './main.frag'
 import Image2D from './tex.jpg'
 import * as dat from 'dat.gui'
 
+import gitHash from '../hash.txt'
+
 import { mat4 } from 'gl-matrix'
 
 var gl
@@ -243,6 +245,8 @@ function webGLStart () {
   canvas.addEventListener('mouseup', mouseUp)
   canvas.addEventListener('mouseout', mouseUp)
   canvas.addEventListener('wheel', mouseWheel)
+
+  document.getElementById('git-hash').innerHTML += 'Git hash: ' + gitHash
 
   GuiInit()
 
