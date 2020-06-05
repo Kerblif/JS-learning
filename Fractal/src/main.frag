@@ -1,43 +1,46 @@
 #version 300 es
 precision highp float;
 
-uniform float offX, offY, zoom;
+uniform float offRight, offLeft, offUp, offDown;
+uniform float uTime;
 uniform sampler2D Tex2D;
 
 uniform float param3, param4;
 
 out vec4 oColor;
 
-vec2 vec2addvec2(vec2 a, vec2 b)
+float Mandl( vec2 C, vec2 Z )
 {
-    return vec2(a.x + b.x, a.y + b.y);
-}
-vec2 vec2mulvec2(vec2 a, vec2 b)
-{
-    return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
-}
-float vec2abs(vec2 a)
-{
-    return sqrt(a.x * a.x + a.y * a.y);
-}
-float vec2rec(vec2 xy)
-{
-    vec2 z = xy;
-    float i;
-    while (vec2abs(z) < 2.0 && i < 2000.0)
+    vec2 C0 = C;
+    float n = 0.0;
+    float moduleC = 0.0;
+    for(float j = 0.0; j < 255.0; j++)
     {
-      i++;
-      z = vec2addvec2(vec2mulvec2(z, z), xy);
+        C0 = vec2(C0.x * C0.x - C0.y * C0.y, C0.y * C0.x + C0.x * C0.y) + Z;
+        moduleC = C0.x * C0.x + C0.y * C0.y;
+        if (moduleC >= 16.0)
+        {
+            n = j;
+            break;    
+        } 
     }
-    return i;
+    return n;
 }
 void main(void)
 {
-    vec2 xy = vec2(gl_FragCoord) / 500.0;
-    xy.x -= 0.5 + offX;
-    xy.y -= 0.5 + offY;
-    xy /= zoom;
-    float i = vec2rec(xy);
-    vec3 frac = vec3(1.0 - (i * 12.2324 / 13.7898 + 1072.54) / 2000.0 + param3 / 100.0, (i * 45.9766 / 54.7898 + 960.14) / 2000.0 + param3 / 100.0, (i + 1000.0) / 2000.0 + param3 / 100.0);
-    oColor = texture(Tex2D, frac.xy + param4 / 1000.0);
+    float n;
+    vec2 C = vec2(0.35, 0.38);
+    vec2 Z;
+    vec2 xy = vec2(offLeft, offDown) + gl_FragCoord.xy / 500.0 * (vec2(offRight, offUp) - vec2(offLeft, offDown));
+    //vec2 xy = vec2(0.0, 0.0);
+    C.x = 0.5 + 0.711 * sin(uTime / 8.2);
+    C.y = 1.05 + 3.711 * sin(uTime / 8.2);
+    Z.x = xy.x;
+    Z.y = xy.y;
+    n = Mandl(Z, C);
+    vec3 TexColor = texture(Tex2D, xy).xyz;  
+    oColor.x = n * TexColor.x;
+    oColor.y = n * TexColor.y;
+    oColor.z = n * TexColor.z;  
+    oColor.w = 1.0;    
 }

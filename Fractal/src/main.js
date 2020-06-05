@@ -116,11 +116,10 @@ function initShaders () {
   gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute)
 }
 
-var mvMatrix = mat4.create()
-var pMatrix = mat4.create()
-var offX = 0.0
-var offY = 0.0
-var zoom = 1.0
+var offLeft = 0.0
+var offRight = 1.0
+var offDown = 0.0
+var offUp = 1.0
 var timeMs = Date.now()
 var startTime = Date.now()
 var Tex2D
@@ -131,9 +130,10 @@ var param4 = 0.0
 
 function setUniforms () {
   storage.setUniform('uTime', timeMs)
-  storage.setUniform('offX', offX)
-  storage.setUniform('offY', offY)
-  storage.setUniform('zoom', zoom)
+  storage.setUniform('offRight', offRight)
+  storage.setUniform('offLeft', offLeft)
+  storage.setUniform('offUp', offUp)
+  storage.setUniform('offDown', offDown)
   storage.setUniform('param1', param1)
   storage.setUniform('param2', param2)
   storage.setUniform('param3', param3)
@@ -229,8 +229,10 @@ function StorageInit () {
   storage.addTexture('Tex2D', 0, Tex2D, 'TEXTURE_2D')
 
   storage.addParam('uTime', '1f')
-  storage.addParam('offX', '1f')
-  storage.addParam('offY', '1f')
+  storage.addParam('offRight', '1f')
+  storage.addParam('offLeft', '1f')
+  storage.addParam('offUp', '1f')
+  storage.addParam('offDown', '1f')
   storage.addParam('zoom', '1f')
   storage.addParam('param1', '1f')
   storage.addParam('param2', '1f')
@@ -238,8 +240,9 @@ function StorageInit () {
   storage.addParam('param4', '1f')
 }
 
+var canvas = document.getElementById('webglCanvas')
+
 function webGLStart () {
-  var canvas = document.getElementById('webglCanvas')
   canvas.addEventListener('mousemove', control)
   canvas.addEventListener('mousedown', mouseDown)
   canvas.addEventListener('mouseup', mouseUp)
@@ -276,26 +279,53 @@ function mouseUp () {
   yNew = undefined
 }
 
+function getMousePos () {
+  var rect = canvas.getBoundingClientRect()
+  return {
+    x: xNew - rect.left,
+    y: yNew - rect.top
+  }
+}
+
 function mouseWheel (e) {
-  var oldZoom = zoom
-  zoom += e.wheelDelta / 240.0 * zoom
-  offX += (zoom - oldZoom) * param1 / 100 / zoom + 0.5 / zoom
-  offY += (zoom - oldZoom) * param2 / 100 / zoom + 0.5 / zoom
+  var MousePos = getMousePos()
+  MousePos.y = 500 - MousePos.y
+
+  var scroll = e.deltaY / 10.0
+  var newZoom = 1
+
+  if (scroll > 0) {
+    newZoom *= 1 + 0.5 * scroll / 100.0
+  } else {
+    newZoom /= 1 - 0.5 * scroll / 100.0
+  }
+
+  var newLeft = offLeft + MousePos.x / 500.0 * (offRight - offLeft) * (1 - newZoom)
+  var newDown = offDown + MousePos.y / 500.0 * (offUp - offDown) * (1 - newZoom)
+  offRight = newLeft + (offRight - offLeft) * newZoom
+  offUp = newDown + (offUp - offDown) * newZoom
+
+  offLeft = newLeft
+  offDown = newDown
 }
 
 function control (e) {
+  xOld = xNew
+  xNew = e.clientX
+  yOld = yNew
+  yNew = e.clientY
   if (IsClicked) {
-    xOld = xNew
-    xNew = e.clientX
-    yOld = yNew
-    yNew = e.clientY
     if (xOld !== undefined) {
-      offX += (xNew - xOld) / 200.0
+      var newLeft = offLeft - (xNew - xOld) / 500.0 * (offRight - offLeft)
+      offRight = newLeft + (offRight - offLeft)
+      offLeft = newLeft
     }
     if (yOld !== undefined) {
-      offY += (yOld - yNew) / 200.0
+      var newDown = offDown + (yNew - yOld) / 500.0 * (offUp - offDown)
+      offUp = newDown + (offUp - offDown)
+      offDown = newDown
     }
   }
 }
 
-document.addEventListener('DOMContentLoaded', webGLStart);
+document.addEventListener('DOMContentLoaded', webGLStart)
