@@ -8,6 +8,9 @@ module.exports = {
     filename: 'index-bundles.js',
     path: path.resolve(__dirname, 'dist')
   },
+  node: {
+    fs: 'empty'
+  },
   devtool: 'source-map',
   module: {
     rules: [
