@@ -2,11 +2,17 @@ import * as THREE from 'three';
 
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
+import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper';
+
 import './main.css';
 
 var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
 var scene;
 var renderer;
+
+var meshes = [];
+var phara;
+var time;
 
 class Contrl {
   constructor () {
@@ -15,32 +21,52 @@ class Contrl {
     };
     this.KeyPressed = function (event) {
       switch (event.keyCode) {
-        case 100: /* d */
+        case 68: /* d */
           Car.scene.position.x -= 4;
+          phara.position.x -= 4;
           camera.position.x -= 4;
           break;
-        case 68: /* D */
+        case 39: /* D */
           camera.position.x += 4;
           break;
-        case 97: /* a */
+        case 65: /* a */
           Car.scene.position.x += 4;
+          phara.position.x += 4;
           camera.position.x += 4;
           break;
-        case 65: /* A */
+        case 37: /* A */
           camera.position.x -= 4;
           break;
-        case 115: /* s */
+        case 83: /* s */
           Car.scene.position.z -= 4;
+          phara.position.z -= 4;
+          meshes[5].rotation.x -= 0.1;
+          meshes[6].rotation.x -= 0.1;
+          meshes[7].rotation.x -= 0.1;
+          meshes[8].rotation.x -= 0.1;
+          meshes[9].rotation.x -= 0.1;
+          meshes[10].rotation.x -= 0.1;
+          meshes[11].rotation.x -= 0.1;
+          meshes[12].rotation.x -= 0.1;
           camera.position.z -= 4;
           break;
-        case 83: /* S */
+        case 40: /* S */
           camera.position.z += 4;
           break;
-        case 119: /* w */
+        case 87: /* w */
           Car.scene.position.z += 4;
+          phara.position.z += 4;
+          meshes[5].rotation.x += 0.1;
+          meshes[6].rotation.x += 0.1;
+          meshes[7].rotation.x += 0.1;
+          meshes[8].rotation.x += 0.1;
+          meshes[9].rotation.x += 0.1;
+          meshes[10].rotation.x += 0.1;
+          meshes[11].rotation.x += 0.1;
+          meshes[12].rotation.x += 0.1;
           camera.position.z += 4;
           break;
-        case 87: /* W */
+        case 38: /* W */
           camera.position.z -= 4;
           break;
       }
@@ -58,12 +84,13 @@ function updateCar () {
   var CarPos = Car.scene.position;
   var PosOnLand = 450 * (225 + CarPos.z / 4) + 225 + CarPos.x / 4;
 
-  var val = HeightData[PosOnLand];
+  var val = HeightData[PosOnLand] + 0.1;
 
   var delta = Car.scene.position.y - val;
 
   Car.scene.position.y = val;
   camera.position.y -= delta;
+  phara.position.y -= delta;
 }
 
 var canvas = document.getElementById('MainCanvas');
@@ -92,14 +119,26 @@ animate();
 
 function CarLoad () {
   var loader = new GLTFLoader();
-  loader.load('../bin/models/Car/scene.gltf', function (object) {
+  loader.load('../bin/models/Car2/scene.gltf', function (object) {
     Car = object;
+
     Car.scene.traverse(function (object) {
       if (object.isMesh) {
+        meshes.push(object);
         object.castShadow = true;
+        object.receiveShadow = true;
       }
     });
     scene.add(Car.scene);
+    const color = 0xFFFFFF;
+    const intensity = 100;
+    const width = 1.3;
+    const height = 0.5;
+    phara = new THREE.RectAreaLight(color, intensity, width, height);
+    phara.position.set(0, 0.8, 2.3);
+    phara.rotation.x = THREE.MathUtils.degToRad(180);
+    scene.add(phara);
+    Car.castShadow = true;
   }, undefined, function (error) {
     alert(error);
   });
@@ -141,10 +180,6 @@ function getHeightData (name) {
 
       HeightData = data;
       GenerateLandscape();
-      mesh.traverse(function (object) {
-        if (object.isMesh) object.castShadow = true;
-      });
-      mesh.receiveShadow = true;
       scene.add(mesh);
     },
     undefined,
@@ -230,15 +265,16 @@ function GenerateLandscape () {
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
 
-  mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture }));
+  mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ map: texture, side: THREE.DoubleSide }));
+  mesh.receiveShadow = true;
 }
 
 function DirectionLightCreate () {
   const color = 0xFFFFFF;
   const intensity = 1;
   light = new THREE.DirectionalLight(color, intensity);
-  light.position.set(10, 0, 10);
-  light.target.position.set(-5, -5, 0);
+  light.position.set(0, 0, 0);
+  light.target.position.set(0, 0, 0);
 
   light.shadow.camera.near = 0.5;
   light.shadow.camera.far = 5000;
@@ -249,15 +285,15 @@ function DirectionLightCreate () {
 
   light.castShadow = true;
   scene.add(light);
-  var helper = new THREE.CameraHelper(light.shadow.camera);
-  scene.add(helper);
 }
 
 function init () {
-  document.addEventListener('keypress', Keyboard.KeyPressed);
+  time = 0;
+  document.addEventListener('keydown', Keyboard.KeyPressed);
   camera.position.y = 5;
 
   scene = new THREE.Scene();
+  scene.background = new THREE.Color();
 
   CarLoad();
 
@@ -284,7 +320,26 @@ function init () {
   document.body.appendChild(renderer.domElement);
 }
 
+function SetSky () {
+  if (time < 100) {
+    scene.background.r = time / 100;
+    scene.background.g = time / 100;
+    scene.background.b = time / 100;
+    light.intensity = time / 100;
+  } else {
+    scene.background.r = 1 - (time - 100) / 100;
+    scene.background.g = 1 - (time - 100) / 100;
+    scene.background.b = 1 - (time - 100) / 100;
+    light.intensity = 1 - (time - 100) / 100;
+  }
+}
+
 function animate () {
+  time += 0.1;
+  if (time >= 200) {
+    time = 0;
+  }
+  SetSky();
   requestAnimationFrame(animate);
   updateCamera();
   renderer.render(scene, camera);
@@ -292,6 +347,11 @@ function animate () {
 
 function updateCamera () {
   if (Car != undefined) {
+    var pos = Car.scene.position;
+    light.position.set(pos.x, pos.y, pos.z);
+    light.target.position.set(pos.x, pos.y, pos.z);
+    light.position.y += 100;
+    light.target.position.y -= 100;
     camera.lookAt(Car.scene.position);
   }
 }
