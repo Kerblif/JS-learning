@@ -15,33 +15,33 @@ class Contrl {
     };
     this.KeyPressed = function (event) {
       switch (event.keyCode) {
-        case 100: /* w */
-          Car.scene.position.x -= 1;
-          camera.position.x -= 1;
+        case 100: /* d */
+          Car.scene.position.x -= 4;
+          camera.position.x -= 4;
           break;
-        case 68: /* W */
-          camera.position.x += 1;
+        case 68: /* D */
+          camera.position.x += 4;
           break;
         case 97: /* a */
-          Car.scene.position.x += 1;
-          camera.position.x += 1;
+          Car.scene.position.x += 4;
+          camera.position.x += 4;
           break;
         case 65: /* A */
-          camera.position.x -= 1;
+          camera.position.x -= 4;
           break;
         case 115: /* s */
-          Car.scene.position.z -= 1;
-          camera.position.z -= 1;
+          Car.scene.position.z -= 4;
+          camera.position.z -= 4;
           break;
         case 83: /* S */
-          camera.position.z += 1;
+          camera.position.z += 4;
           break;
         case 119: /* w */
-          Car.scene.position.z += 1;
-          camera.position.z += 1;
+          Car.scene.position.z += 4;
+          camera.position.z += 4;
           break;
         case 87: /* W */
-          camera.position.z -= 1;
+          camera.position.z -= 4;
           break;
       }
       updateCar();
@@ -56,11 +56,13 @@ class Contrl {
 
 function updateCar () {
   var CarPos = Car.scene.position;
-  var PosOnLand = 450 * (225 + CarPos.z) + 225 + CarPos.x;
+  var PosOnLand = 450 * (225 + CarPos.z / 4) + 225 + CarPos.x / 4;
 
-  var delta = Car.scene.position.y - HeightData[PosOnLand];
+  var val = HeightData[PosOnLand];
 
-  Car.scene.position.y = HeightData[PosOnLand];
+  var delta = Car.scene.position.y - val;
+
+  Car.scene.position.y = val;
   camera.position.y -= delta;
 }
 
@@ -92,7 +94,11 @@ function CarLoad () {
   var loader = new GLTFLoader();
   loader.load('../bin/models/Car/scene.gltf', function (object) {
     Car = object;
-    Car.scene.castShadow = true;
+    Car.scene.traverse(function (object) {
+      if (object.isMesh) {
+        object.castShadow = true;
+      }
+    });
     scene.add(Car.scene);
   }, undefined, function (error) {
     alert(error);
@@ -135,6 +141,9 @@ function getHeightData (name) {
 
       HeightData = data;
       GenerateLandscape();
+      mesh.traverse(function (object) {
+        if (object.isMesh) object.castShadow = true;
+      });
       mesh.receiveShadow = true;
       scene.add(mesh);
     },
