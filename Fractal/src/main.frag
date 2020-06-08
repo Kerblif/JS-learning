@@ -5,7 +5,7 @@ uniform float offRight, offLeft, offUp, offDown;
 uniform float uTime;
 uniform sampler2D Tex2D;
 
-uniform float param3, param4;
+uniform float param1, param2, param3, param4;
 
 out vec4 oColor;
 
@@ -33,8 +33,8 @@ void main(void)
     vec2 Z;
     vec2 xy = vec2(offLeft, offDown) + gl_FragCoord.xy / 500.0 * (vec2(offRight, offUp) - vec2(offLeft, offDown));
     //vec2 xy = vec2(0.0, 0.0);
-    C.x = 0.5 + 0.711 * sin(uTime / 8.2);
-    C.y = 1.05 + 3.711 * sin(uTime / 8.2);
+    C.x = 0.5 + 0.711 * sin(uTime * param3 / 8.2) + param1 / 100.0;
+    C.y = 1.05 + 3.711 * sin(uTime * param4 / 8.2) + param2 / 100.0;
     Z.x = xy.x;
     Z.y = xy.y;
     n = Mandl(Z, C);
