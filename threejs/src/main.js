@@ -16,61 +16,56 @@ var time;
 
 class Contrl {
   constructor () {
-    this.PressKeys = {
-      0: false
-    };
+    this.Angle = 0;
     this.KeyPressed = function (event) {
       switch (event.keyCode) {
         case 68: /* d */
-          Car.scene.position.x -= 4;
-          phara.position.x -= 4;
-          camera.position.x -= 4;
+          if (this.Angle == undefined) {
+            this.Angle = 0;
+          }
+          this.Angle += 0.1;
+          if (this.Angle > 360) {
+            this.Angle = this.Angle - 360;
+          }
+          CarRotate(this.Angle);
           break;
         case 39: /* D */
           camera.position.x += 4;
           break;
         case 65: /* a */
-          Car.scene.position.x += 4;
-          phara.position.x += 4;
-          camera.position.x += 4;
+          if (this.Angle == undefined) {
+            this.Angle = 0;
+          }
+          this.Angle -= 0.1;
+          if (this.Angle < 0) {
+            this.Angle = 360 + this.Angle;
+          }
+          CarRotate(this.Angle);
           break;
         case 37: /* A */
           camera.position.x -= 4;
           break;
         case 83: /* s */
-          Car.scene.position.z -= 4;
-          phara.position.z -= 4;
-          meshes[5].rotation.x -= 0.1;
-          meshes[6].rotation.x -= 0.1;
-          meshes[7].rotation.x -= 0.1;
-          meshes[8].rotation.x -= 0.1;
-          meshes[9].rotation.x -= 0.1;
-          meshes[10].rotation.x -= 0.1;
-          meshes[11].rotation.x -= 0.1;
-          meshes[12].rotation.x -= 0.1;
-          camera.position.z -= 4;
+          if (this.Angle == undefined) {
+            this.Angle = 0;
+          }
+          MoveCar(-Math.sin(this.Angle), -Math.cos(this.Angle));
+          WheelsRotate(-0.2);
           break;
         case 40: /* S */
           camera.position.z += 4;
           break;
         case 87: /* w */
-          Car.scene.position.z += 4;
-          phara.position.z += 4;
-          meshes[5].rotation.x += 0.1;
-          meshes[6].rotation.x += 0.1;
-          meshes[7].rotation.x += 0.1;
-          meshes[8].rotation.x += 0.1;
-          meshes[9].rotation.x += 0.1;
-          meshes[10].rotation.x += 0.1;
-          meshes[11].rotation.x += 0.1;
-          meshes[12].rotation.x += 0.1;
-          camera.position.z += 4;
+          if (this.Angle == undefined) {
+            this.Angle = 0;
+          }
+          MoveCar(Math.sin(this.Angle), Math.cos(this.Angle));
+          WheelsRotate(0.2);
           break;
         case 38: /* W */
           camera.position.z -= 4;
           break;
       }
-      updateCar();
     };
     this.GetKey = function (key) {
       return this.PressKeys[key];
@@ -80,17 +75,50 @@ class Contrl {
   }
 }
 
+function WheelsRotate (deg) {
+  meshes[5].rotation.x += deg;
+  meshes[6].rotation.x += deg;
+  meshes[7].rotation.x += deg;
+  meshes[8].rotation.x += deg;
+  meshes[9].rotation.x += deg;
+  meshes[10].rotation.x += deg;
+  meshes[11].rotation.x += deg;
+  meshes[12].rotation.x += deg;
+}
+
+function CarRotate (deg) {
+  Car.scene.rotation.y = deg;
+}
+
+function MoveCar (x, z) {
+  Car.scene.position.x += x;
+  camera.position.x += x;
+  Car.scene.position.z += z;
+  camera.position.z += z;
+
+  updateCar();
+}
+
+function GetPosOnLand (x, z) {
+  return 450 * (225 + z) + 225 + x;
+}
+
 function updateCar () {
   var CarPos = Car.scene.position;
-  var PosOnLand = 450 * (225 + CarPos.z / 4) + 225 + CarPos.x / 4;
-
-  var val = HeightData[PosOnLand] + 0.1;
+  var PosX = CarPos.x / 4;
+  var PosZ = CarPos.z / 4;
+  var Dx = Math.abs(PosX % 1);
+  var Dz = Math.abs(PosZ % 1);
+  var val =
+  HeightData[GetPosOnLand(Math.floor(PosX), Math.floor(PosZ))] * Dx * Dz +
+  HeightData[GetPosOnLand(Math.floor(PosX), Math.ceil(PosZ))] * Dx * (1 - Dz) +
+  HeightData[GetPosOnLand(Math.ceil(PosX), Math.floor(PosZ))] * (1 - Dx) * Dz +
+  HeightData[GetPosOnLand(Math.ceil(PosX), Math.ceil(PosZ))] * (1 - Dx) * (1 - Dz);
 
   var delta = Car.scene.position.y - val;
 
   Car.scene.position.y = val;
   camera.position.y -= delta;
-  phara.position.y -= delta;
 }
 
 var canvas = document.getElementById('MainCanvas');
@@ -137,8 +165,9 @@ function CarLoad () {
     phara = new THREE.RectAreaLight(color, intensity, width, height);
     phara.position.set(0, 0.8, 2.3);
     phara.rotation.x = THREE.MathUtils.degToRad(180);
-    scene.add(phara);
+    Car.scene.add(phara);
     Car.castShadow = true;
+    Car.scene.position.y = 0;
   }, undefined, function (error) {
     alert(error);
   });
