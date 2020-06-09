@@ -13,65 +13,98 @@ var renderer;
 var meshes = [];
 var phara;
 var time;
+var helper;
 
-class Contrl {
-  constructor () {
-    this.Angle = 0;
-    this.KeyPressed = function (event) {
-      switch (event.keyCode) {
-        case 68: /* d */
-          if (this.Angle == undefined) {
-            this.Angle = 0;
-          }
-          this.Angle += 0.1;
-          if (this.Angle > 360) {
-            this.Angle = this.Angle - 360;
-          }
-          CarRotate(this.Angle);
-          break;
-        case 39: /* D */
-          camera.position.x += 4;
-          break;
-        case 65: /* a */
-          if (this.Angle == undefined) {
-            this.Angle = 0;
-          }
-          this.Angle -= 0.1;
-          if (this.Angle < 0) {
-            this.Angle = 360 + this.Angle;
-          }
-          CarRotate(this.Angle);
-          break;
-        case 37: /* A */
-          camera.position.x -= 4;
-          break;
-        case 83: /* s */
-          if (this.Angle == undefined) {
-            this.Angle = 0;
-          }
-          MoveCar(-Math.sin(this.Angle), -Math.cos(this.Angle));
-          WheelsRotate(-0.2);
-          break;
-        case 40: /* S */
-          camera.position.z += 4;
-          break;
-        case 87: /* w */
-          if (this.Angle == undefined) {
-            this.Angle = 0;
-          }
-          MoveCar(Math.sin(this.Angle), Math.cos(this.Angle));
-          WheelsRotate(0.2);
-          break;
-        case 38: /* W */
-          camera.position.z -= 4;
-          break;
+var Angle = 0;
+var PressedKeys = {};
+function KeyDown (event) {
+  if (PressedKeys == undefined) {
+    PressedKeys = {};
+  }
+  PressedKeys[event.keyCode] = true;
+}
+function KeyUp (event) {
+  if (PressedKeys == undefined) {
+    PressedKeys = {};
+  }
+  PressedKeys[event.keyCode] = false;
+}
+function GetKey (key) {
+  return PressedKeys[key];
+}
+
+function ChangeScene () {
+  if (time % 1 == 0) {
+    return;
+  }
+  if (GetKey(87)) {
+    if (GetKey(65)) {
+      if (Angle == undefined) {
+        Angle = 0;
       }
-    };
-    this.GetKey = function (key) {
-      return this.PressKeys[key];
-    };
-    this.RotateCamera = function () {
-    };
+      Angle += 0.01;
+      if (Angle > 360) {
+        Angle = Angle - 360;
+      }
+      CarRotate(Angle);
+    } else {
+      if (GetKey(68)) {
+        if (Angle == undefined) {
+          Angle = 0;
+        }
+        Angle -= 0.01;
+        if (Angle < 0) {
+          Angle = 360 + Angle;
+        }
+        CarRotate(Angle);
+      }
+    }
+    if (Angle == undefined) {
+      Angle = 0;
+    }
+    MoveCar(Math.sin(Angle), Math.cos(Angle));
+    WheelsRotate(0.2);
+  } else {
+    if (GetKey(83)) {
+      if (GetKey(65)) {
+        if (Angle == undefined) {
+          Angle = 0;
+        }
+        Angle += 0.1;
+        if (Angle > 360) {
+          Angle = Angle - 360;
+        }
+        CarRotate(Angle);
+      } else {
+        if (GetKey(68)) {
+          if (Angle == undefined) {
+            Angle = 0;
+          }
+          Angle -= 0.1;
+          if (Angle < 0) {
+            Angle = 360 + Angle;
+          }
+          CarRotate(Angle);
+        }
+      }
+      if (Angle == undefined) {
+        Angle = 0;
+      }
+      MoveCar(-Math.sin(Angle), -Math.cos(Angle));
+      WheelsRotate(-0.2);
+    }
+  }
+  if (GetKey(39)) {
+    camera.position.x += 1;
+  }
+  if (GetKey(37)) {
+    camera.position.x -= 1;
+  }
+  if (GetKey(38)) {
+    camera.position.z -= 1;
+  }
+  if (GetKey(40)) {
+    camera.position.z += 1;
   }
 }
 
@@ -114,6 +147,7 @@ function updateCar () {
   HeightData[GetPosOnLand(Math.floor(PosX), Math.ceil(PosZ))] * Dx * (1 - Dz) +
   HeightData[GetPosOnLand(Math.ceil(PosX), Math.floor(PosZ))] * (1 - Dx) * Dz +
   HeightData[GetPosOnLand(Math.ceil(PosX), Math.ceil(PosZ))] * (1 - Dx) * (1 - Dz);
+  val *= 3;
 
   var delta = Car.scene.position.y - val;
 
@@ -122,7 +156,6 @@ function updateCar () {
 }
 
 var canvas = document.getElementById('MainCanvas');
-var Keyboard = new Contrl();
 var Car;
 var HeightData;
 var texture;
@@ -287,7 +320,7 @@ function GenerateLandscape () {
   var vertices = geometry.attributes.position.array;
 
   for (var i = 0, j = 0, l = vertices.length; i < l; i++, j += 3) {
-    vertices[j + 1] = data[i];
+    vertices[j + 1] = data[i] * 3;
   }
 
   texture = new THREE.CanvasTexture(generateTexture(data, 450, 450));
@@ -302,15 +335,15 @@ function DirectionLightCreate () {
   const color = 0xFFFFFF;
   const intensity = 1;
   light = new THREE.DirectionalLight(color, intensity);
-  light.position.set(0, 0, 0);
+  light.position.set(0, 100, 0);
   light.target.position.set(0, 0, 0);
 
   light.shadow.camera.near = 0.5;
   light.shadow.camera.far = 5000;
-  light.shadow.camera.left = -100;
-  light.shadow.camera.bottom = -100;
-  light.shadow.camera.right = 100;
-  light.shadow.camera.top = 100;
+  light.shadow.camera.left = -5;
+  light.shadow.camera.bottom = -5;
+  light.shadow.camera.right = 5;
+  light.shadow.camera.top = 5;
 
   light.castShadow = true;
   scene.add(light);
@@ -318,7 +351,8 @@ function DirectionLightCreate () {
 
 function init () {
   time = 0;
-  document.addEventListener('keydown', Keyboard.KeyPressed);
+  document.addEventListener('keydown', KeyDown);
+  document.addEventListener('keyup', KeyUp);
   camera.position.y = 5;
 
   scene = new THREE.Scene();
@@ -364,12 +398,13 @@ function SetSky () {
 }
 
 function animate () {
+  requestAnimationFrame(animate);
   time += 0.1;
   if (time >= 200) {
     time = 0;
   }
   SetSky();
-  requestAnimationFrame(animate);
+  ChangeScene();
   updateCamera();
   renderer.render(scene, camera);
 }
@@ -377,10 +412,9 @@ function animate () {
 function updateCamera () {
   if (Car != undefined) {
     var pos = Car.scene.position;
-    light.position.set(pos.x, pos.y, pos.z);
-    light.target.position.set(pos.x, pos.y, pos.z);
-    light.position.y += 100;
-    light.target.position.y -= 100;
+    light.target.position.set(pos.x, pos.y - 100, pos.z);
+    light.position.set(pos.x, pos.y + 100, pos.z);
+    light.target.updateMatrixWorld();
     camera.lookAt(Car.scene.position);
   }
 }
