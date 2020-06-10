@@ -14,6 +14,7 @@ var meshes = [];
 var phara;
 var time;
 var helper;
+var speed = 0;
 
 var Angle = 0;
 var PressedKeys = {};
@@ -37,62 +38,8 @@ function ChangeScene () {
   if (time % 1 == 0) {
     return;
   }
-  if (GetKey(87)) {
-    if (GetKey(65)) {
-      if (Angle == undefined) {
-        Angle = 0;
-      }
-      Angle += 0.01;
-      if (Angle > 360) {
-        Angle = Angle - 360;
-      }
-      CarRotate(Angle);
-    } else {
-      if (GetKey(68)) {
-        if (Angle == undefined) {
-          Angle = 0;
-        }
-        Angle -= 0.01;
-        if (Angle < 0) {
-          Angle = 360 + Angle;
-        }
-        CarRotate(Angle);
-      }
-    }
-    if (Angle == undefined) {
-      Angle = 0;
-    }
-    MoveCar(Math.sin(Angle), Math.cos(Angle));
-    WheelsRotate(0.2);
-  } else {
-    if (GetKey(83)) {
-      if (GetKey(65)) {
-        if (Angle == undefined) {
-          Angle = 0;
-        }
-        Angle += 0.1;
-        if (Angle > 360) {
-          Angle = Angle - 360;
-        }
-        CarRotate(Angle);
-      } else {
-        if (GetKey(68)) {
-          if (Angle == undefined) {
-            Angle = 0;
-          }
-          Angle -= 0.1;
-          if (Angle < 0) {
-            Angle = 360 + Angle;
-          }
-          CarRotate(Angle);
-        }
-      }
-      if (Angle == undefined) {
-        Angle = 0;
-      }
-      MoveCar(-Math.sin(Angle), -Math.cos(Angle));
-      WheelsRotate(-0.2);
-    }
+  if (Car == undefined) {
+    return;
   }
   if (GetKey(39)) {
     camera.position.x += 1;
@@ -106,6 +53,101 @@ function ChangeScene () {
   if (GetKey(40)) {
     camera.position.z += 1;
   }
+  if (GetKey(87)) {
+    if (GetKey(65)) {
+      if (Angle == undefined) {
+        Angle = 0;
+      }
+      Angle += 0.01;
+      CarRotate(Angle);
+    } else {
+      if (GetKey(68)) {
+        if (Angle == undefined) {
+          Angle = 0;
+        }
+        Angle -= 0.01;
+        CarRotate(Angle);
+      }
+    }
+    if (Angle == undefined) {
+      Angle = 0;
+    }
+    if (speed < 0) {
+      speed += 0.05;
+    }
+    speed += 0.01;
+    WheelsRotate(0.2);
+  } else {
+    if (GetKey(83)) {
+      if (GetKey(68)) {
+        if (Angle == undefined) {
+          Angle = 0;
+        }
+        Angle += 0.01;
+        CarRotate(Angle);
+      } else {
+        if (GetKey(65)) {
+          if (Angle == undefined) {
+            Angle = 0;
+          }
+          Angle -= 0.01;
+          CarRotate(Angle);
+        }
+      }
+      if (Angle == undefined) {
+        Angle = 0;
+      }
+      if (speed > 0) {
+        speed -= 0.05;
+      }
+      speed -= 0.01;
+      WheelsRotate(-0.2);
+    } else {
+      if (speed == 0) {
+        return;
+      }
+      if (Math.abs(speed) < 0.07) {
+        speed = 0;
+        return;
+      }
+      if (speed > 0) {
+        if (GetKey(65)) {
+          if (Angle == undefined) {
+            Angle = 0;
+          }
+          Angle += 0.01;
+          CarRotate(Angle);
+        } else {
+          if (GetKey(68)) {
+            if (Angle == undefined) {
+              Angle = 0;
+            }
+            Angle -= 0.01;
+            CarRotate(Angle);
+          }
+        }
+        speed -= 0.05;
+      } else {
+        if (GetKey(68)) {
+          if (Angle == undefined) {
+            Angle = 0;
+          }
+          Angle += 0.01;
+          CarRotate(Angle);
+        } else {
+          if (GetKey(65)) {
+            if (Angle == undefined) {
+              Angle = 0;
+            }
+            Angle -= 0.01;
+            CarRotate(Angle);
+          }
+        }
+        speed += 0.05;
+      }
+    }
+  }
+  MoveCar(Math.sin(Angle) * speed, Math.cos(Angle) * speed);
 }
 
 function WheelsRotate (deg) {
