@@ -34,6 +34,9 @@ var HeightData;
 var mesh;
 var light;
 
+var particles = [];
+var numOfParticles = 200;
+
 window.addEventListener('resize', resizeCanvas, false);
 document.addEventListener('resize', resizeCanvas, false);
 
@@ -55,7 +58,7 @@ function GetKey (key) {
   return PressedKeys[key];
 }
 
-function ChangeScene () {
+function Control () {
   if (time % 1 == 0) {
     return;
   }
@@ -382,6 +385,28 @@ function addWater (height) {
   scene.add(water);
 }
 
+function addParticles (particles) {
+  var loader = new THREE.TextureLoader();
+  loader.load('../bin/images/cloud.png', function (texture) {
+    var cloudGeom = new THREE.PlaneBufferGeometry(1, 1);
+    var cloudMaterial = new THREE.MeshLambertMaterial({
+      map: texture,
+      transparent: true,
+      side: THREE.DoubleSide
+    });
+
+    for (let t = 0; t < numOfParticles; t++) {
+      const cloud = new THREE.Mesh(cloudGeom, cloudMaterial);
+      cloud.position.x = 0;
+      cloud.position.y = 0;
+      cloud.position.z = 0;
+      cloud.material.opacity = Math.random();
+      particles.push(cloud);
+      scene.add(cloud);
+    }
+  });
+}
+
 function init () {
   time = 0;
   document.addEventListener('keydown', KeyDown);
@@ -392,6 +417,8 @@ function init () {
   scene.background = new THREE.Color();
 
   CarLoad();
+
+  addParticles(particles);
 
   DirectionLightCreate();
 
@@ -431,21 +458,37 @@ function SetSky () {
   }
 }
 
-function animate () {
+function animate (now) {
+  now *= 0.001;
+
   requestAnimationFrame(animate);
   time += 0.1;
   if (time >= 200) {
     time = 0;
   }
   SetSky();
-  ChangeScene();
-  updateCamera();
+  Control();
+  updateScene(now);
   renderer.render(scene, camera);
 }
 
-function updateCamera () {
+function updateScene (now) {
   if (Car != undefined) {
     var pos = Car.scene.position;
+
+    particles.forEach(function (particle) {
+      particle.material.opacity -= now / 10000;
+      particle.position.y += now / 5000;
+      particle.lookAt(camera.position);
+      if (particle.material.opacity <= 0) {
+        particle.material.opacity = 0.55;
+        particle.position.set(
+          Car.scene.position.x + Math.random() / 10,
+          Car.scene.position.y + Math.random() / 10,
+          Car.scene.position.z + Math.random() / 10);
+      }
+    });
+
     light.target.position.set(pos.x, pos.y - 100, pos.z);
     light.position.set(pos.x, pos.y + 100, pos.z);
     light.target.updateMatrixWorld();
