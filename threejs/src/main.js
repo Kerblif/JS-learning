@@ -18,18 +18,31 @@ var speed = 0;
 
 var Angle = 0;
 var PressedKeys = {};
+
+var canvas = document.getElementById('MainCanvas');
+var Car;
+var HeightData;
+var texture;
+var mesh;
+var light;
+
+window.addEventListener('resize', resizeCanvas, false);
+document.addEventListener('resize', resizeCanvas, false);
+
 function KeyDown (event) {
   if (PressedKeys == undefined) {
     PressedKeys = {};
   }
   PressedKeys[event.keyCode] = true;
 }
+
 function KeyUp (event) {
   if (PressedKeys == undefined) {
     PressedKeys = {};
   }
   PressedKeys[event.keyCode] = false;
 }
+
 function GetKey (key) {
   return PressedKeys[key];
 }
@@ -197,16 +210,6 @@ function updateCar () {
   camera.position.y -= delta;
 }
 
-var canvas = document.getElementById('MainCanvas');
-var Car;
-var HeightData;
-var texture;
-var mesh;
-var light;
-
-window.addEventListener('resize', resizeCanvas, false);
-document.addEventListener('resize', resizeCanvas, false);
-
 function resizeCanvas () {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -215,10 +218,6 @@ function resizeCanvas () {
 
   animate();
 }
-
-init();
-resizeCanvas();
-animate();
 
 function CarLoad () {
   var loader = new GLTFLoader();
@@ -460,3 +459,7 @@ function updateCamera () {
     camera.lookAt(Car.scene.position);
   }
 }
+
+init();
+resizeCanvas();
+animate();
