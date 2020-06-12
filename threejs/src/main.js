@@ -2,7 +2,17 @@ import * as THREE from 'three';
 
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper';
+import vxShader from './main.vert';
+import fsShader from './main.frag';
+
+import heightmap from '../bin/images/tex.png';
+
+import dirtTex from '../bin/images/landscape/dirt.jpg';
+import oceanTex from '../bin/images/landscape/water.jpg';
+import sandTex from '../bin/images/landscape/sand.jpg';
+import grassTex from '../bin/images/landscape/grass.jpg';
+import rockTex from '../bin/images/landscape/rock.jpg';
+import snowTex from '../bin/images/landscape/snow.jpg';
 
 import './main.css';
 
@@ -13,7 +23,6 @@ var renderer;
 var meshes = [];
 var phara;
 var time;
-var helper;
 var speed = 0;
 
 var Angle = 0;
@@ -22,7 +31,6 @@ var PressedKeys = {};
 var canvas = document.getElementById('MainCanvas');
 var Car;
 var HeightData;
-var texture;
 var mesh;
 var light;
 
@@ -65,6 +73,12 @@ function ChangeScene () {
   }
   if (GetKey(40)) {
     camera.position.z += 1;
+  }
+  if (GetKey(33)) {
+    camera.position.y += 1;
+  }
+  if (GetKey(34)) {
+    camera.position.y -= 1;
   }
   if (GetKey(87)) {
     if (GetKey(65)) {
@@ -188,7 +202,7 @@ function MoveCar (x, z) {
 }
 
 function GetPosOnLand (x, z) {
-  return 450 * (225 + z) + 225 + x;
+  return 512 * (256 + z) + 256 + x;
 }
 
 function updateCar () {
@@ -241,7 +255,7 @@ function CarLoad () {
     phara.rotation.x = THREE.MathUtils.degToRad(180);
     Car.scene.add(phara);
     Car.castShadow = true;
-    Car.scene.position.y = 0;
+    updateCar();
   }, undefined, function (error) {
     alert(error);
   });
@@ -254,11 +268,11 @@ function getHeightData (name) {
     '../bin/images/' + name,
     function (img) {
       var canvas = document.createElement('canvas');
-      canvas.width = 450;
-      canvas.height = 450;
+      canvas.width = 512;
+      canvas.height = 512;
       var context = canvas.getContext('2d');
 
-      var size = 450 * 450; var data = new Float32Array(size);
+      var size = 512 * 512; var data = new Float32Array(size);
 
       context.drawImage(img, 0, 0);
 
@@ -266,19 +280,13 @@ function getHeightData (name) {
         data[i] = 0;
       }
 
-      var imgd = context.getImageData(0, 0, 450, 450);
+      var imgd = context.getImageData(0, 0, 512, 512);
       var pix = imgd.data;
 
       var j = 0;
       for (var i = 0, n = pix.length; i < n; i += (4)) {
         var all = pix[i] + pix[i + 1] + pix[i + 2];
         data[j++] = all / 30;
-      }
-
-      var val = data[225 * 451];
-
-      for (var i = 0; i < 450 * 450; i++) {
-        data[i] -= val;
       }
 
       HeightData = data;
@@ -292,70 +300,46 @@ function getHeightData (name) {
   );
 }
 
-function generateTexture (data, width, height) {
-  var canvas, canvasScaled, context, image, imageData, vector3, sun, shade;
+function generateMaterial () {
+  const bumpTexture = new THREE.TextureLoader().load(heightmap);
+  bumpTexture.wrapS = bumpTexture.wrapT = THREE.RepeatWrapping;
 
-  vector3 = new THREE.Vector3(0, 0, 0);
+  const oceanTexture = new THREE.TextureLoader().load(dirtTex);
+  oceanTexture.wrapS = oceanTexture.wrapT = THREE.RepeatWrapping;
 
-  sun = light.position;
-  sun.normalize();
+  const sandyTexture = new THREE.TextureLoader().load(sandTex);
+  sandyTexture.wrapS = sandyTexture.wrapT = THREE.RepeatWrapping;
 
-  canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  const grassTexture = new THREE.TextureLoader().load(grassTex);
+  grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping;
 
-  context = canvas.getContext('2d');
-  context.fillStyle = '#000';
-  context.fillRect(0, 0, width, height);
+  const rockyTexture = new THREE.TextureLoader().load(rockTex);
+  rockyTexture.wrapS = rockyTexture.wrapT = THREE.RepeatWrapping;
 
-  image = context.getImageData(0, 0, canvas.width, canvas.height);
-  imageData = image.data;
+  const snowyTexture = new THREE.TextureLoader().load(snowTex);
+  snowyTexture.wrapS = snowyTexture.wrapT = THREE.RepeatWrapping;
 
-  for (var i = 0, j = 0, l = imageData.length; i < l; i += 4, j++) {
-    vector3.x = data[j - 2] - data[j + 2];
-    vector3.y = 2;
-    vector3.z = data[j - width * 2] - data[j + width * 2];
-    vector3.normalize();
-
-    shade = vector3.dot(sun);
-
-    imageData[i] = (96 + shade * 128) * (0.5 + data[j] * 0.007);
-    imageData[i + 1] = (32 + shade * 96) * (0.5 + data[j] * 0.007);
-    imageData[i + 2] = (shade * 96) * (0.5 + data[j] * 0.007);
-  }
-
-  context.putImageData(image, 0, 0);
-
-  // Scaled 4x
-
-  canvasScaled = document.createElement('canvas');
-  canvasScaled.width = width * 4;
-  canvasScaled.height = height * 4;
-
-  context = canvasScaled.getContext('2d');
-  context.scale(4, 4);
-  context.drawImage(canvas, 0, 0);
-
-  image = context.getImageData(0, 0, canvasScaled.width, canvasScaled.height);
-  imageData = image.data;
-
-  for (var i = 0, l = imageData.length; i < l; i += 4) {
-    var v = ~~(Math.random() * 5);
-
-    imageData[i] += v;
-    imageData[i + 1] += v;
-    imageData[i + 2] += v;
-  }
-
-  context.putImageData(image, 0, 0);
-
-  return canvasScaled;
+  var heightMapUniforms = {
+    bumpTexture: { type: 't', value: bumpTexture },
+    oceanTexture: { type: 't', value: oceanTexture },
+    sandyTexture: { type: 't', value: sandyTexture },
+    grassTexture: { type: 't', value: grassTexture },
+    rockyTexture: { type: 't', value: rockyTexture },
+    snowyTexture: { type: 't', value: snowyTexture }
+  };
+  const mat = new THREE.ShaderMaterial({
+    uniforms: heightMapUniforms,
+    vertexShader: vxShader,
+    fragmentShader: fsShader,
+    side: THREE.DoubleSide
+  });
+  return mat;
 }
 
 function GenerateLandscape () {
   var data = HeightData;
 
-  var geometry = new THREE.PlaneBufferGeometry(1800, 1800, 449, 449);
+  var geometry = new THREE.PlaneBufferGeometry(2048, 2048, 511, 511);
   geometry.rotateX(-Math.PI / 2);
 
   var vertices = geometry.attributes.position.array;
@@ -364,11 +348,7 @@ function GenerateLandscape () {
     vertices[j + 1] = data[i] * 3;
   }
 
-  texture = new THREE.CanvasTexture(generateTexture(data, 450, 450));
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-
-  mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ map: texture, side: THREE.DoubleSide }));
+  mesh = new THREE.Mesh(geometry, generateMaterial());
   mesh.receiveShadow = true;
 }
 
@@ -390,6 +370,18 @@ function DirectionLightCreate () {
   scene.add(light);
 }
 
+function addWater (height) {
+  const pGeo = new THREE.PlaneGeometry(2048, 2048, 1, 1);
+  const waterTex = new THREE.TextureLoader().load(oceanTex);
+  waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping;
+  waterTex.repeat.set(5, 5);
+  const waterMat = new THREE.MeshBasicMaterial({ map: waterTex, transparent: true, opacity: 0.40 });
+  const water = new THREE.Mesh(pGeo, waterMat);
+  water.rotation.x = -Math.PI / 2;
+  water.position.y = height;
+  scene.add(water);
+}
+
 function init () {
   time = 0;
   document.addEventListener('keydown', KeyDown);
@@ -403,7 +395,8 @@ function init () {
 
   DirectionLightCreate();
 
-  getHeightData('tex.jpg');
+  getHeightData('tex.png');
+  addWater(25.69);
 
   renderer = new THREE.WebGLRenderer({ canvas: MainCanvas });
 
