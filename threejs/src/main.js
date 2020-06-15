@@ -37,6 +37,8 @@ var light;
 var particles = [];
 var numOfParticles = 200;
 
+var NeedHeight = 10;
+
 window.addEventListener('resize', resizeCanvas, false);
 document.addEventListener('resize', resizeCanvas, false);
 
@@ -78,10 +80,10 @@ function Control () {
     camera.position.z += 1;
   }
   if (GetKey(33)) {
-    camera.position.y += 1;
+    NeedHeight += 1;
   }
   if (GetKey(34)) {
-    camera.position.y -= 1;
+    NeedHeight -= 1;
   }
   if (GetKey(87)) {
     if (GetKey(65)) {
@@ -209,22 +211,24 @@ function GetPosOnLand (x, z) {
 }
 
 function updateCar () {
+  if (HeightData == undefined) {
+    return;
+  }
   var CarPos = Car.scene.position;
   var PosX = CarPos.x / 4;
   var PosZ = CarPos.z / 4;
-  var Dx = Math.abs(PosX % 1);
-  var Dz = Math.abs(PosZ % 1);
-  var val =
-  HeightData[GetPosOnLand(Math.floor(PosX), Math.floor(PosZ))] * Dx * Dz +
-  HeightData[GetPosOnLand(Math.floor(PosX), Math.ceil(PosZ))] * Dx * (1 - Dz) +
-  HeightData[GetPosOnLand(Math.ceil(PosX), Math.floor(PosZ))] * (1 - Dx) * Dz +
-  HeightData[GetPosOnLand(Math.ceil(PosX), Math.ceil(PosZ))] * (1 - Dx) * (1 - Dz);
+  var val = HeightData[GetPosOnLand(Math.round(PosX), Math.round(PosZ))];
   val *= 3;
 
-  var delta = Car.scene.position.y - val;
-
   Car.scene.position.y = val;
-  camera.position.y -= delta;
+
+  var CameraPos = camera.position;
+  PosX = CameraPos.x / 4;
+  PosZ = CameraPos.z / 4;
+  val = HeightData[GetPosOnLand(Math.round(PosX), Math.round(PosZ))];
+  val *= 3;
+
+  camera.position.y = val + NeedHeight;
 }
 
 function resizeCanvas () {
@@ -388,7 +392,7 @@ function addWater (height) {
 function addParticles (particles) {
   var loader = new THREE.TextureLoader();
   loader.load('../bin/images/cloud.png', function (texture) {
-    var cloudGeom = new THREE.PlaneBufferGeometry(1, 1);
+    var cloudGeom = new THREE.PlaneBufferGeometry(2, 2);
     var cloudMaterial = new THREE.MeshLambertMaterial({
       map: texture,
       transparent: true,
@@ -411,7 +415,6 @@ function init () {
   time = 0;
   document.addEventListener('keydown', KeyDown);
   document.addEventListener('keyup', KeyUp);
-  camera.position.y = 5;
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color();
@@ -480,8 +483,11 @@ function updateScene (now) {
       particle.material.opacity -= now / 10000;
       particle.position.y += now / 5000;
       particle.lookAt(camera.position);
-      if (particle.material.opacity <= 0) {
-        particle.material.opacity = 0.55;
+      if (particle.material.opacity <= 0 ||
+        (particle.position.y > Car.scene.position.y + 1 &&
+          Math.abs(Car.scene.position.x - particle.position.x) <= 0.1 &&
+          Math.abs(Car.scene.position.z - particle.position.z) <= 0.1)) {
+        particle.material.opacity = Math.random() / 2;
         particle.position.set(
           Car.scene.position.x + Math.random() / 10,
           Car.scene.position.y + Math.random() / 10,
