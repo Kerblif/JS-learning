@@ -105,9 +105,9 @@ function Control () {
       Angle = 0;
     }
     if (speed < 0) {
-      speed += 0.05;
+      speed += 0.005;
     }
-    speed += 0.01;
+    speed += 0.001;
     WheelsRotate(0.2);
   } else {
     if (GetKey(83)) {
@@ -130,9 +130,9 @@ function Control () {
         Angle = 0;
       }
       if (speed > 0) {
-        speed -= 0.05;
+        speed -= 0.005;
       }
-      speed -= 0.01;
+      speed -= 0.001;
       WheelsRotate(-0.2);
     } else {
       if (speed == 0) {
@@ -158,7 +158,7 @@ function Control () {
             CarRotate(Angle);
           }
         }
-        speed -= 0.05;
+        speed -= 0.005;
       } else {
         if (GetKey(68)) {
           if (Angle == undefined) {
@@ -175,7 +175,7 @@ function Control () {
             CarRotate(Angle);
           }
         }
-        speed += 0.05;
+        speed += 0.005;
       }
     }
   }
@@ -247,6 +247,7 @@ function CarLoad () {
 
     Car.scene.traverse(function (object) {
       if (object.isMesh) {
+        object.material.color.convertLinearToGamma(2.0);
         meshes.push(object);
         object.castShadow = true;
         object.receiveShadow = true;
@@ -383,6 +384,7 @@ function addWater (height) {
   waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping;
   waterTex.repeat.set(5, 5);
   const waterMat = new THREE.MeshBasicMaterial({ map: waterTex, transparent: true, opacity: 0.40 });
+  waterMat.color.convertLinearToGamma(2.0);
   const water = new THREE.Mesh(pGeo, waterMat);
   water.rotation.x = -Math.PI / 2;
   water.position.y = height;
