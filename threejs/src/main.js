@@ -263,6 +263,7 @@ function CarLoad () {
     phara.rotation.x = THREE.MathUtils.degToRad(180);
     Car.scene.add(phara);
     Car.castShadow = true;
+    Car.receiveShadow = true;
     updateCar();
   }, undefined, function (error) {
     alert(error);
@@ -308,40 +309,62 @@ function getHeightData (name) {
   );
 }
 
-function generateMaterial () {
-  const bumpTexture = new THREE.TextureLoader().load(heightmap);
-  bumpTexture.wrapS = bumpTexture.wrapT = THREE.RepeatWrapping;
+function generateTexture (data, width, height) {
+  var canvas, canvasScaled, context, image, imageData, vector3, sun, shade;
 
-  const oceanTexture = new THREE.TextureLoader().load(dirtTex);
-  oceanTexture.wrapS = oceanTexture.wrapT = THREE.RepeatWrapping;
+  vector3 = new THREE.Vector3(0, 0, 0);
 
-  const sandyTexture = new THREE.TextureLoader().load(sandTex);
-  sandyTexture.wrapS = sandyTexture.wrapT = THREE.RepeatWrapping;
+  sun = light.position;
+  sun.normalize();
 
-  const grassTexture = new THREE.TextureLoader().load(grassTex);
-  grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping;
+  canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
 
-  const rockyTexture = new THREE.TextureLoader().load(rockTex);
-  rockyTexture.wrapS = rockyTexture.wrapT = THREE.RepeatWrapping;
+  context = canvas.getContext('2d');
+  context.fillStyle = '#000';
+  context.fillRect(0, 0, width, height);
 
-  const snowyTexture = new THREE.TextureLoader().load(snowTex);
-  snowyTexture.wrapS = snowyTexture.wrapT = THREE.RepeatWrapping;
+  image = context.getImageData(0, 0, canvas.width, canvas.height);
+  imageData = image.data;
 
-  var heightMapUniforms = {
-    bumpTexture: { type: 't', value: bumpTexture },
-    oceanTexture: { type: 't', value: oceanTexture },
-    sandyTexture: { type: 't', value: sandyTexture },
-    grassTexture: { type: 't', value: grassTexture },
-    rockyTexture: { type: 't', value: rockyTexture },
-    snowyTexture: { type: 't', value: snowyTexture }
-  };
-  const mat = new THREE.ShaderMaterial({
-    uniforms: heightMapUniforms,
-    vertexShader: vxShader,
-    fragmentShader: fsShader,
-    side: THREE.DoubleSide
-  });
-  return mat;
+  for (var i = 0, j = 0, l = imageData.length; i < l; i += 4, j++) {
+    vector3.x = data[j - 2] - data[j + 2];
+    vector3.y = 2;
+    vector3.z = data[j - width * 2] - data[j + width * 2];
+    vector3.normalize();
+
+    shade = vector3.dot(sun);
+
+    imageData[i] = (96 + shade * 128) * (0.5 + data[j] * 0.007);
+    imageData[i + 1] = (32 + shade * 96) * (0.5 + data[j] * 0.007);
+    imageData[i + 2] = (shade * 96) * (0.5 + data[j] * 0.007);
+  }
+
+  context.putImageData(image, 0, 0);
+
+  canvasScaled = document.createElement('canvas');
+  canvasScaled.width = width * 4;
+  canvasScaled.height = height * 4;
+
+  context = canvasScaled.getContext('2d');
+  context.scale(4, 4);
+  context.drawImage(canvas, 0, 0);
+
+  image = context.getImageData(0, 0, canvasScaled.width, canvasScaled.height);
+  imageData = image.data;
+
+  for (var i = 0, l = imageData.length; i < l; i += 4) {
+    var v = ~~(Math.random() * 5);
+
+    imageData[i] += v;
+    imageData[i + 1] += v;
+    imageData[i + 2] += v;
+  }
+
+  context.putImageData(image, 0, 0);
+
+  return canvasScaled;
 }
 
 function GenerateLandscape () {
@@ -356,7 +379,11 @@ function GenerateLandscape () {
     vertices[j + 1] = data[i] * 3;
   }
 
-  mesh = new THREE.Mesh(geometry, generateMaterial());
+  var texture = new THREE.CanvasTexture(generateTexture(data, 450, 450));
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+
+  mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ map: texture, side: THREE.DoubleSide }));
   mesh.receiveShadow = true;
 }
 
@@ -368,7 +395,7 @@ function DirectionLightCreate () {
   light.target.position.set(0, 0, 0);
 
   light.shadow.camera.near = 0.5;
-  light.shadow.camera.far = 5000;
+  light.shadow.camera.far = 500;
   light.shadow.camera.left = -5;
   light.shadow.camera.bottom = -5;
   light.shadow.camera.right = 5;
@@ -450,17 +477,23 @@ function init () {
 }
 
 function SetSky () {
-  if (time < 100) {
-    scene.background.r = time / 100;
-    scene.background.g = time / 100;
-    scene.background.b = time / 100;
-    light.intensity = time / 100;
+  var y, w;
+
+  if (time < 50 || time >= 150) {
+    y = (100.0 - Math.abs(100.0 - time)) / 50.0;
   } else {
-    scene.background.r = 1 - (time - 100) / 100;
-    scene.background.g = 1 - (time - 100) / 100;
-    scene.background.b = 1 - (time - 100) / 100;
-    light.intensity = 1 - (time - 100) / 100;
+    y = 1;
   }
+  if (time >= 50 && time < 150) {
+    w = (50.0 - Math.abs(100.0 - time)) / 50.0;
+  } else {
+    w = 0;
+  }
+  light.color.r = (y * 200.0 + w * 55.0) / 255.0;
+  light.color.g = (y * 120.0 + w * 135.0) / 255.0;
+  light.color.b = (y * 50.0 + w * 205.0) / 255.0;
+
+  scene.background = light.color;
 }
 
 function animate (now) {
@@ -497,8 +530,8 @@ function updateScene (now) {
       }
     });
 
-    light.target.position.set(pos.x, pos.y - 100, pos.z);
-    light.position.set(pos.x, pos.y + 100, pos.z);
+    light.target.position.set(pos.x, pos.y, pos.z);
+    light.position.set(pos.x + (time - 100) * 5, pos.y + 100, pos.z);
     light.target.updateMatrixWorld();
     camera.lookAt(Car.scene.position);
   }
