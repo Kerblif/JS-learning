@@ -423,19 +423,18 @@ function addWater (height) {
 function addParticles (particles) {
   var loader = new THREE.TextureLoader();
   loader.load('../bin/images/cloud.png', function (texture) {
-    var cloudGeom = new THREE.PlaneBufferGeometry(2, 2);
-    var cloudMaterial = new THREE.MeshLambertMaterial({
-      map: texture,
-      transparent: true,
-      side: THREE.DoubleSide
-    });
-
     for (let t = 0; t < numOfParticles; t++) {
+      var cloudGeom = new THREE.PlaneBufferGeometry(2, 2);
+      var cloudMaterial = new THREE.MeshLambertMaterial({
+        map: texture,
+        transparent: true,
+        side: THREE.DoubleSide
+      });
       const cloud = new THREE.Mesh(cloudGeom, cloudMaterial);
       cloud.position.x = 0;
       cloud.position.y = 0;
       cloud.position.z = 0;
-      cloud.material.opacity = Math.random();
+      cloud.material.opacity = Math.random() / 10;
       particles.push(cloud);
       scene.add(cloud);
     }
@@ -520,18 +519,13 @@ function updateScene (now) {
     var pos = Car.scene.position;
 
     particles.forEach(function (particle) {
-      particle.material.opacity -= now / 10000;
-      particle.position.y += now / 5000;
       particle.lookAt(camera.position);
-      if (particle.material.opacity <= 0 ||
-        (particle.position.y > Car.scene.position.y + 1 &&
-          Math.abs(Car.scene.position.x - particle.position.x) <= 0.1 &&
-          Math.abs(Car.scene.position.z - particle.position.z) <= 0.1)) {
+      if (particle.material.opacity <= 0.1) {
+        particle.position.set(pos.x, pos.y, pos.z);
         particle.material.opacity = Math.random() / 2;
-        particle.position.set(
-          Car.scene.position.x + Math.random() / 10,
-          Car.scene.position.y + Math.random() / 10,
-          Car.scene.position.z + Math.random() / 10);
+      } else {
+        particle.material.opacity -= now * 100;
+        particle.position.y += now * 100;
       }
     });
 
