@@ -39,6 +39,8 @@ var numOfParticles = 200;
 
 var NeedHeight = 10;
 
+var clock = new THREE.Clock();
+
 window.addEventListener('resize', resizeCanvas, false);
 document.addEventListener('resize', resizeCanvas, false);
 
@@ -441,7 +443,7 @@ function addParticles (particles) {
 }
 
 function init () {
-  time = 0;
+  time = 50;
   document.addEventListener('keydown', KeyDown);
   document.addEventListener('keyup', KeyUp);
 
@@ -479,13 +481,16 @@ function init () {
 function SetSky () {
   var y, w;
 
-  if (time < 50 || time >= 150) {
-    y = (100.0 - Math.abs(100.0 - time)) / 50.0;
+  if (time < 25 || time >= 175) {
+    y = (100.0 - Math.abs(100.0 - time)) / 25.0;
   } else {
     y = 1;
   }
-  if (time >= 50 && time < 150) {
-    w = (50.0 - Math.abs(100.0 - time)) / 50.0;
+  if (time >= 25 && time < 175) {
+    w = (75.0 - Math.abs(100.0 - time)) / 50.0;
+    if (w > 1) {
+      w = 1;
+    }
   } else {
     w = 0;
   }
@@ -496,17 +501,17 @@ function SetSky () {
   scene.background = light.color;
 }
 
-function animate (now) {
-  now *= 0.001;
-
+function animate () {
   requestAnimationFrame(animate);
-  time += 0.1;
+
+  time += clock.getDelta();
+
   if (time >= 200) {
     time = 0;
   }
   SetSky();
   Control();
-  updateScene(now);
+  updateScene(clock.getDelta());
   renderer.render(scene, camera);
 }
 
