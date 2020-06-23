@@ -3,6 +3,8 @@ import { saveAs } from 'file-saver';
 
 import './main.css';
 
+var fs = require('browserify-fs');
+
 var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
 var canvas;
 var canvasContent;
@@ -18,14 +20,12 @@ var MouseX, MouseY;
 
 var PrevX, PrevY;
 
-var ImageMap = [];
-var pen = 2;
-
 var BoardImage;
 var ChalkImage;
 
-window.addEventListener('resize', resizeCanvas, false);
-document.addEventListener('resize', resizeCanvas, false);
+function getBase64Image () {
+  return canvas.toDataURL('image/png');
+}
 
 function getCookie (name) {
   const matches = document.cookie.match(new RegExp(
@@ -137,13 +137,13 @@ function Draw () {
 function resizeCanvas () {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = 512;
+  canvas.height = 300;
+}
 
-  if (BoardImage !== undefined) {
-    canvasContent.drawImage(BoardImage, 0, 0, window.innerWidth, window.innerHeight);
-  }
-  animate();
+function autoSave () {
+  loadImageToFile();
+  setTimeout(autoSave, 5000);
 }
 
 function init () {
@@ -154,12 +154,35 @@ function init () {
   CanvasInit();
   ImagesInit();
   resizeCanvas();
+  autoSave();
   animate();
+}
+
+function loadImageToFile () {
+  var data = getBase64Image();
+
+  fs.writeFile('./BlackboardData.txt', data, (err) => {
+    if (err) throw err;
+    console.log('The file has been saved!');
+  });
+}
+
+function loadImageFromFile () {
+  fs.readFile('./BlackboardData.txt', 'utf8', (err, data) => {
+    if (err) throw err;
+
+    var image = new Image();
+    image.src = data;
+    image.onload = function () {
+      canvasContent.drawImage(this, 0, 0, canvas.width, canvas.height);
+    };
+  });
 }
 
 function CanvasInit () {
   canvas = document.getElementById('MainCanvas');
   canvasContent = canvas.getContext('2d');
+  loadImageFromFile();
   canvas.addEventListener('mousedown', function (event) {
     if (event.which === 1) {
       mouseLState = true;
@@ -205,22 +228,27 @@ function CanvasInit () {
         LoadChalkImage = new Image();
         LoadChalkImage.onload = loadChalkImage;
         LoadChalkImage.src = '../bin/images/chalk.png';
-        pen = 1;
         break;
       case 50 :
         LoadChalkImage = new Image();
         LoadChalkImage.onload = loadChalkImage;
         LoadChalkImage.src = '../bin/images/marker.png';
-        pen = 2;
         break;
       case 83:
         canvas.toBlob(function (blob) {
+          setCookie('image', blob);
           saveAs(blob, 'blackboard.png');
         });
         break;
       case 73:
-        alert('ЛКМ - рисовать. \nПКМ - стирать. \nКолесо мыши - увеличение/уменьшение кисти \nЦифра 1 - мелок \nЦифра 2 - маркер (по умолчанию)\nS - сохранить ваш шедевр');
+        alert('ЛКМ - рисовать. \nПКМ - стирать. \nКолесо мыши - увеличение/уменьшение кисти \nЦифра 1 - мелок \nЦифра 2 - маркер (по умолчанию)\nS - сохранить ваш шедевр (в виде файла)');
+        alert('Также сохранение изображения автоматичесокое (раз в 5 секунд)');
         break;
+      case 13:
+        loadImageToFile();
+        break;
+      case 17:
+        loadImageFromFile();
     }
   });
 }

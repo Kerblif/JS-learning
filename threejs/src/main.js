@@ -5,14 +5,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import vxShader from './main.vert';
 import fsShader from './main.frag';
 
-import heightmap from '../bin/images/tex.png';
-
-import dirtTex from '../bin/images/landscape/dirt.jpg';
 import oceanTex from '../bin/images/landscape/water.jpg';
-import sandTex from '../bin/images/landscape/sand.jpg';
-import grassTex from '../bin/images/landscape/grass.jpg';
-import rockTex from '../bin/images/landscape/rock.jpg';
-import snowTex from '../bin/images/landscape/snow.jpg';
+import dustTex from '../bin/images/cloud2.png';
 
 import './main.css';
 
@@ -35,9 +29,12 @@ var mesh;
 var light;
 
 var particles = [];
-var numOfParticles = 200;
+var numOfParticles = 50;
 
 var NeedHeight = 10;
+
+var cameraTarget;
+var carHeight;
 
 var clock = new THREE.Clock();
 
@@ -212,6 +209,26 @@ function GetPosOnLand (x, z) {
   return 512 * (256 + z) + 256 + x;
 }
 
+function setCameraHeight (height) {
+  var n = camera.position.y;
+  var delta = height - n;
+  delta *= 0.1;
+  camera.position.y += delta;
+}
+
+function setCarHeight (height) {
+  if (carHeight == undefined) {
+    Car.scene.position.y = height;
+  }
+  carHeight = height;
+}
+
+function angleBetweenTwoVectors (vector1, vector2) {
+  var t = vector1.x * vector2.x + vector1.y * vector2.y + vector1.z * vector2.z
+  var a = t / (vector1.length() * vector2.length());
+  return Math.acos(a);
+}
+
 function updateCar () {
   if (HeightData == undefined) {
     return;
@@ -222,7 +239,7 @@ function updateCar () {
   var val = HeightData[GetPosOnLand(Math.round(PosX), Math.round(PosZ))];
   val *= 3;
 
-  Car.scene.position.y = val;
+  setCarHeight(val);
 
   var CameraPos = camera.position;
   PosX = CameraPos.x / 4;
@@ -230,7 +247,22 @@ function updateCar () {
   val = HeightData[GetPosOnLand(Math.round(PosX), Math.round(PosZ))];
   val *= 3;
 
-  camera.position.y = val + NeedHeight;
+  setCameraHeight(val + NeedHeight);
+
+  // MoveCar(Math.sin(Angle) * speed, Math.cos(Angle) * speed);
+
+  /* var CarFx = CarPos.x / 4 - Math.sin(Angle) * 0.5;
+  var CarFz = CarPos.z / 4 - Math.cos(Angle) * 0.5;
+  var CarFy = HeightData[GetPosOnLand(Math.round(CarFx), Math.round(CarFz))];
+
+  var CarBx = CarPos.x / 4 + Math.sin(Angle) * 0.5;
+  var CarBz = CarPos.z / 4 + Math.cos(Angle) * 0.5;
+  var CarBy = HeightData[GetPosOnLand(Math.round(CarBx), Math.round(CarBz))];
+
+  var CarFU = new THREE.Vector3(CarFx - CarBx, CarFy - CarBy, CarFy - CarBy);
+  var CarFD = new THREE.Vector3(CarFx, CarBy, CarFz);
+  var AngleF = angleBetweenTwoVectors(CarFU, CarFD);
+  Car.scene.rotation.x = AngleF; */
 }
 
 function resizeCanvas () {
@@ -266,6 +298,7 @@ function CarLoad () {
     Car.scene.add(phara);
     Car.castShadow = true;
     Car.receiveShadow = true;
+
     updateCar();
   }, undefined, function (error) {
     alert(error);
@@ -302,6 +335,14 @@ function getHeightData (name) {
 
       HeightData = data;
       GenerateLandscape();
+
+      var CameraPos = camera.position;
+      var PosX = CameraPos.x / 4;
+      var PosZ = CameraPos.z / 4;
+      var val = HeightData[GetPosOnLand(Math.round(PosX), Math.round(PosZ))];
+      val *= 3;
+      camera.position.y = val + NeedHeight;
+
       scene.add(mesh);
     },
     undefined,
@@ -402,6 +443,7 @@ function DirectionLightCreate () {
   light.shadow.camera.bottom = -5;
   light.shadow.camera.right = 5;
   light.shadow.camera.top = 5;
+  light.shadow.bias = -0.005;
 
   light.castShadow = true;
   scene.add(light);
@@ -421,24 +463,30 @@ function addWater (height) {
 }
 
 function addParticles (particles) {
-  var loader = new THREE.TextureLoader();
-  loader.load('../bin/images/cloud.png', function (texture) {
-    for (let t = 0; t < numOfParticles; t++) {
-      var cloudGeom = new THREE.PlaneBufferGeometry(2, 2);
-      var cloudMaterial = new THREE.MeshLambertMaterial({
-        map: texture,
-        transparent: true,
-        side: THREE.DoubleSide
-      });
-      const cloud = new THREE.Mesh(cloudGeom, cloudMaterial);
-      cloud.position.x = 0;
-      cloud.position.y = 0;
-      cloud.position.z = 0;
-      cloud.material.opacity = Math.random() / 10;
-      particles.push(cloud);
-      scene.add(cloud);
-    }
-  });
+  const dustTexture = new THREE.TextureLoader().load(dustTex);
+  dustTexture.wrapS = dustTexture.wrapT = THREE.RepeatWrapping;
+
+  for (let t = 0; t < numOfParticles; t++) {
+    var dustUniforms = {
+      dustTexture: { type: 't', value: dustTexture },
+      alpha: { type: 'f', value: 0.0 }
+    };
+    var cloudMaterial = new THREE.ShaderMaterial({
+      uniforms: dustUniforms,
+      vertexShader: vxShader,
+      fragmentShader: fsShader,
+      side: THREE.DoubleSide
+    });
+    cloudMaterial.depthWrite = false;
+    cloudMaterial.transparent = true;
+    const cloud = new THREE.Sprite(cloudMaterial);
+    cloud.position.x = 0;
+    cloud.position.y = 0;
+    cloud.position.z = 0;
+    cloud.material.opacity = Math.random() / 10;
+    particles.push(cloud);
+    scene.add(cloud);
+  }
 }
 
 function init () {
@@ -514,17 +562,36 @@ function animate () {
   renderer.render(scene, camera);
 }
 
+function setCameraTarget (target) {
+  if (cameraTarget == undefined) {
+    cameraTarget = new THREE.Vector3(target.x, target.y, target.z);
+    camera.lookAt(cameraTarget);
+    return;
+  }
+  cameraTarget.x += (target.x - cameraTarget.x) * 0.5;
+  cameraTarget.y += (target.y - cameraTarget.y) * 0.05;
+  cameraTarget.z += (target.z - cameraTarget.z) * 0.5;
+  camera.lookAt(cameraTarget);
+}
+
 function updateScene (now) {
   if (Car != undefined) {
     var pos = Car.scene.position;
 
     particles.forEach(function (particle) {
       particle.lookAt(camera.position);
-      if (particle.material.opacity <= 0.1) {
+      if (particle.material.uniforms.alpha.value <= 0) {
         particle.position.set(pos.x, pos.y, pos.z);
-        particle.material.opacity = Math.random() / 2;
+        if (speed !== 0) {
+          particle.material.uniforms.alpha.value = Math.random() / 2;
+        } else {
+          particle.position.set(0, 0, 0);
+        }
       } else {
-        particle.material.opacity -= now * 100;
+        particle.material.uniforms.alpha.value -= 0.01;
+        if (particle.material.uniforms.alpha.value < 0) {
+          particle.material.uniforms.alpha.value = 0;
+        }
         particle.position.y += now * 100;
       }
     });
@@ -532,7 +599,9 @@ function updateScene (now) {
     light.target.position.set(pos.x, pos.y, pos.z);
     light.position.set(pos.x + (time - 100) * 5, pos.y + 100, pos.z);
     light.target.updateMatrixWorld();
-    camera.lookAt(Car.scene.position);
+    setCameraTarget(Car.scene.position);
+
+    Car.scene.position.y += (carHeight - Car.scene.position.y) * 0.1;
   }
 }
 
