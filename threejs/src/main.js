@@ -224,7 +224,7 @@ function setCarHeight (height) {
 }
 
 function angleBetweenTwoVectors (vector1, vector2) {
-  var t = vector1.x * vector2.x + vector1.y * vector2.y + vector1.z * vector2.z
+  var t = vector1.x * vector2.x + vector1.y * vector2.y + vector1.z * vector2.z;
   var a = t / (vector1.length() * vector2.length());
   return Math.acos(a);
 }
@@ -251,7 +251,7 @@ function updateCar () {
 
   // MoveCar(Math.sin(Angle) * speed, Math.cos(Angle) * speed);
 
-  /* var CarFx = CarPos.x / 4 - Math.sin(Angle) * 0.5;
+  var CarFx = CarPos.x / 4 - Math.sin(Angle) * 0.5;
   var CarFz = CarPos.z / 4 - Math.cos(Angle) * 0.5;
   var CarFy = HeightData[GetPosOnLand(Math.round(CarFx), Math.round(CarFz))];
 
@@ -262,7 +262,7 @@ function updateCar () {
   var CarFU = new THREE.Vector3(CarFx - CarBx, CarFy - CarBy, CarFy - CarBy);
   var CarFD = new THREE.Vector3(CarFx, CarBy, CarFz);
   var AngleF = angleBetweenTwoVectors(CarFU, CarFD);
-  Car.scene.rotation.x = AngleF; */
+  Car.scene.rotation.x = AngleF;
 }
 
 function resizeCanvas () {
